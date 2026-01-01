@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Receipt Upload</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; }
+    label { display: block; margin-top: 20px; font-weight: bold; }
+    select, input, textarea { width: 100%; padding: 8px; margin-top: 5px; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
+    #status { margin-top: 20px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h2>Upload Receipt</h2>
+
+<label>File (PDF or Image)</label>
+<input type="file" id="fileInput" accept=".pdf,image/*">
+
+<label>Category</label>
+<select id="category"></select>
+
+<label>Gig</label>
+<select id="gig"></select>
+
+<label>Description</label>
+<textarea id="description" rows="3"></textarea>
+
+<button onclick="upload()">Upload</button>
+
+<div id="status"></div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbxIhxkK2c603t_lKc03CaVos0B-XQTQTFGHjqT4-1lCJIlLAqmH16zTpQc2Z44YnJTC0w/exec";
+
+async function loadLists() {
+  const res = await fetch(API_URL + "?action=getLists");
+  const data = await res.json();
+
+  const catSelect = document.getElementById("category");
+  const gigSelect = document.getElementById("gig");
+
+  data.categories.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    catSelect.appendChild(opt);
+  });
+
+  data.gigs.forEach(g => {
+    const opt = document.createElement("option");
+    opt.value = g;
+    opt.textContent = g;
+    gigSelect.appendChild(opt);
+  });
+}
+
+async function upload() {
+  const file = document.getElementById("fileInput").files[0];
+  if (!file) {
+    document.getElementById("status").textContent = "Please select a file.";
+    return;
+  }
+
+  const category = document.getElementById("category").value;
+  const gig = document.getElementById("gig").value;
+  const description = document.getElementById("description").value;
+
+  const base64 = await fileToBase64(file);
+
+  const payload = {
+    who: "Galeano",
+    category,
+    description,
+    fileName: file.name,
+    fileMimeType: file.type || "application/octet-stream",
+    fileData: base64.split(",")[1],
+    gig
+  };
+
+  const res = await fetch(API_URL + "?action=uploadReceipt", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  const result = await res.json();
+  document.getElementById("status").textContent = result.message;
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+loadLists();
+</script>
+
+</body>
+</html>
