@@ -105,14 +105,16 @@ async function uploadSingle(index) {
   const base64 = await fileToBase64(file);
 
   const payload = {
-    who: "Galeano",
-    category,
-    description,
-    fileName: file.name,
-    fileMimeType: file.type || "application/octet-stream",
-    fileData: base64.split(",")[1],
-    gig
-  };
+  who: "Galeano",
+  category,
+  description: description || "",
+  fileName: file.name || "receipt.pdf",
+  fileMimeType: (file.type && file.type.length > 0)
+    ? file.type
+    : (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg"),
+  fileData: base64.substring(base64.indexOf(",") + 1),
+  gig
+};
 
   const res = await fetch(API_URL + "?action=uploadReceipt", {
     method: "POST",
@@ -148,4 +150,5 @@ loadLists();
 
 </body>
 </html>
+
 
