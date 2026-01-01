@@ -2,32 +2,43 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Receipt Upload</title>
+  <title>Batch Receipt Upload</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; }
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; }
     label { display: block; margin-top: 20px; font-weight: bold; }
     select, input, textarea { width: 100%; padding: 8px; margin-top: 5px; }
     button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
+    .file-card {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 8px;
+    }
+    .file-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
     #status { margin-top: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
 
-<h2>Upload Receipt</h2>
+<h2>Batch Receipt Upload</h2>
 
-<label>File (PDF or Image)</label>
-<input type="file" id="fileInput" accept=".pdf,image/*">
+<label>Select Files (PDFs or Images)</label>
+<input type="file" id="fileInput" accept=".pdf,image/*" multiple>
 
-<label>Category</label>
+<label>Category (applies to all)</label>
 <select id="category"></select>
 
-<label>Gig</label>
+<label>Gig (applies to all)</label>
 <select id="gig"></select>
 
-<label>Description</label>
-<textarea id="description" rows="3"></textarea>
+<button onclick="generateCards()">Prepare Uploads</button>
 
-<button onclick="upload()">Upload</button>
+<div id="fileCards"></div>
+
+<button id="uploadAllBtn" style="display:none;" onclick="uploadAll()">Upload All</button>
 
 <div id="status"></div>
 
@@ -56,16 +67,40 @@ async function loadLists() {
   });
 }
 
-async function upload() {
-  const file = document.getElementById("fileInput").files[0];
-  if (!file) {
-    document.getElementById("status").textContent = "Please select a file.";
+function generateCards() {
+  const files = document.getElementById("fileInput").files;
+  const container = document.getElementById("fileCards");
+  container.innerHTML = "";
+
+  if (!files.length) {
+    alert("Please select files first.");
     return;
   }
 
+  Array.from(files).forEach((file, index) => {
+    const card = document.createElement("div");
+    card.className = "file-card";
+
+    card.innerHTML = `
+      <div class="file-title">${file.name}</div>
+      <label>Description</label>
+      <textarea id="desc_${index}" rows="2"></textarea>
+      <button onclick="uploadSingle(${index})">Upload This File</button>
+      <div id="status_${index}" style="margin-top:10px;"></div>
+    `;
+
+    container.appendChild(card);
+  });
+
+  document.getElementById("uploadAllBtn").style.display = "block";
+}
+
+async function uploadSingle(index) {
+  const files = document.getElementById("fileInput").files;
+  const file = files[index];
+  const description = document.getElementById("desc_" + index).value;
   const category = document.getElementById("category").value;
   const gig = document.getElementById("gig").value;
-  const description = document.getElementById("description").value;
 
   const base64 = await fileToBase64(file);
 
@@ -86,7 +121,17 @@ async function upload() {
   });
 
   const result = await res.json();
-  document.getElementById("status").textContent = result.message;
+  document.getElementById("status_" + index).textContent = result.message;
+}
+
+async function uploadAll() {
+  const files = document.getElementById("fileInput").files;
+
+  for (let i = 0; i < files.length; i++) {
+    await uploadSingle(i);
+  }
+
+  document.getElementById("status").textContent = "All files uploaded!";
 }
 
 function fileToBase64(file) {
